@@ -22,6 +22,7 @@ var API = {
       type: "GET"
     });
   },
+  // comment
   deleteExample: function(id) {
     return $.ajax({
       url: "api/examples/" + id,
