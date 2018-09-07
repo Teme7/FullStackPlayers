@@ -1,47 +1,47 @@
 // Get references to page elements
-var $exampleText = $("#example-text");
-var $exampleDescription = $("#example-description");
+var $stockText = $("#stock-text");
+var $company = $("#company-name");
 var $submitBtn = $("#submit");
-var $exampleList = $("#example-list");
+var $stockList = $("#stock-list");
 
 // The API object contains methods for each kind of request we'll make
 var API = {
-  saveExample: function(example) {
+  saveStock: function(stock) {
     return $.ajax({
       headers: {
         "Content-Type": "application/json"
       },
       type: "POST",
-      url: "api/examples",
-      data: JSON.stringify(example)
+      url: "api/stocks",
+      data: JSON.stringify(stock)
     });
   },
-  getExamples: function() {
+  getStocks: function() {
     return $.ajax({
-      url: "api/examples",
+      url: "api/stocks",
       type: "GET"
     });
   },
-  deleteExample: function(id) {
+  deleteStock: function(id) {
     return $.ajax({
-      url: "api/examples/" + id,
+      url: "api/stocks/" + id,
       type: "DELETE"
     });
   }
 };
 
 // refreshExamples gets new examples from the db and repopulates the list
-var refreshExamples = function() {
-  API.getExamples().then(function(data) {
-    var $examples = data.map(function(example) {
+var refreshStocks = function() {
+  API.getStocks().then(function(data) {
+    var $stocks = data.map(function(stock) {
       var $a = $("<a>")
-        .text(example.text)
-        .attr("href", "/example/" + example.id);
+        .text(stock.symbol)
+        .attr("href", "/stock/" + stock.id);
 
       var $li = $("<li>")
         .attr({
           class: "list-group-item",
-          "data-id": example.id
+          "data-id": stock.id
         })
         .append($a);
 
@@ -54,8 +54,8 @@ var refreshExamples = function() {
       return $li;
     });
 
-    $exampleList.empty();
-    $exampleList.append($examples);
+    $stockList.empty();
+    $stockList.append($stocks);
   });
 };
 
@@ -64,22 +64,24 @@ var refreshExamples = function() {
 var handleFormSubmit = function(event) {
   event.preventDefault();
 
-  var example = {
-    text: $exampleText.val().trim(),
-    description: $exampleDescription.val().trim()
+  var stock = {
+    symbol: $stockText.val().trim(),
+    companyName: $company.val().trim()
   };
 
-  if (!(example.text && example.description)) {
-    alert("You must enter an example text and description!");
+  if (!(stock.symbol && stock.companyName)) {
+    alert("You must enter a stock symbol and company name!");
     return;
   }
 
-  API.saveExample(example).then(function() {
-    refreshExamples();
+  
+
+  API.saveStock(stock).then(function() {
+    refreshStocks();
   });
 
-  $exampleText.val("");
-  $exampleDescription.val("");
+  $stockText.val("");
+  $company.val("");
 };
 
 // handleDeleteBtnClick is called when an example's delete button is clicked
@@ -89,11 +91,92 @@ var handleDeleteBtnClick = function() {
     .parent()
     .attr("data-id");
 
-  API.deleteExample(idToDelete).then(function() {
-    refreshExamples();
+  API.deleteStock(idToDelete).then(function() {
+    refreshStocks();
   });
 };
 
+// $(document).on('click', '.list-group-item', function() {
+//   //select an enemy to fight
+//   names = ($(this).data('id'));
+// }
+
 // Add event listeners to the submit and delete buttons
 $submitBtn.on("click", handleFormSubmit);
-$exampleList.on("click", ".delete", handleDeleteBtnClick);
+$stockList.on("click", ".delete", handleDeleteBtnClick);
+
+// updateStock();
+
+// function updateStock() {
+//   $.getJSON(
+//     "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=AAPL&interval=1min&apikey=78QJO9OVU07HPZGH",
+//     function(json) {
+//       var times = json["Time Series (1min)"];
+//         console.log(times);
+//     }
+//   );
+// };
+
+var seriesOptions = [],
+  seriesCounter = 0,
+  names = ['goog'];
+
+function createChart() {
+
+  Highcharts.stockChart('container', {
+    rangeSelector: {
+      selected: 4
+    },
+    yAxis: {
+      labels: {
+        formatter: function() {
+          return (this.value > 0 ? ' + ' : '') + this.value + '%';
+        }
+      },
+      plotLines: [{
+        value: 0,
+        width: 2,
+        color: 'silver'
+      }]
+    },
+    plotOptions: {
+      series: {
+        compare: 'percent',
+        showInNavigator: true,
+        // turboThreshold: 0
+      }
+    },
+    tooltip: {
+      pointFormat: '<span style="color:{series.color}">{series.name}</span>: <b>{point.y}</b> ({point.change}%)<br/>',
+      valueDecimals: 2,
+      split: true
+    },
+    series: seriesOptions
+  });
+}
+
+$.each(names, function(i, name) {
+
+  $.getJSON('https://www.quandl.com/api/v1/datasets/WIKI/' + name.toLowerCase() + '.json?auth_token=LnZgCF8fyVmHREMm9p3a', function(data) {
+    var newData = [];
+
+    data.data.forEach(function(point) {
+      newData.push([new Date(point[0]).getTime(), point[1]]);
+    });
+
+    newData.reverse();
+
+    seriesOptions[i] = {
+      name: data.code,
+      data: newData
+    };
+
+    // As we're loading the data asynchronously, we don't know what order it will arrive. So
+    // we keep a counter and create the chart when all the data is loaded.
+    seriesCounter += 1;
+
+    if (seriesCounter === names.length) {
+      createChart();
+    }
+  });
+});
