@@ -3,6 +3,8 @@ var $stockText = $("#stock-text");
 var $company = $("#company-name");
 var $submitBtn = $("#submit");
 var $stockList = $("#stock-list");
+var names = ["aapl"];
+var stockSym;
 
 // The API object contains methods for each kind of request we'll make
 var API = {
@@ -30,10 +32,23 @@ var API = {
   }
 };
 
+getStockList();
+
+function getStockList() {
+  API.getStocks().then(function(data) {
+    for (var i = 0; i < data.length; i++) {
+      names.push(data[i].symbol);
+      console.log(names);
+    }
+    getData();
+  });
+}
+
+
 // refreshExamples gets new examples from the db and repopulates the list
 var refreshStocks = function() {
   API.getStocks().then(function(data) {
-    var $stocks = data.map(function(stock) {
+      var $stocks = data.map(function(stock) {
       var $a = $("<a>")
         .text(stock.symbol)
         .attr("href", "/stock/" + stock.id);
@@ -50,14 +65,17 @@ var refreshStocks = function() {
         .text("ｘ");
 
       $li.append($button);
-
+      
       return $li;
     });
 
     $stockList.empty();
     $stockList.append($stocks);
   });
+
+  
 };
+
 
 // handleFormSubmit is called whenever we submit a new example
 // Save the new example to the db and refresh the list
@@ -74,7 +92,16 @@ var handleFormSubmit = function(event) {
     return;
   }
 
-  
+  if (names.indexOf(stock.symbol) > -1) {
+    return;
+  }
+  else {
+    names.push(stock.symbol);
+  }
+
+  console.log(names);
+
+  getData();
 
   API.saveStock(stock).then(function() {
     refreshStocks();
@@ -117,9 +144,18 @@ $stockList.on("click", ".delete", handleDeleteBtnClick);
 //   );
 // };
 
+$(document).ready(function() {
+  $("#stock-list #stockSymbol").click(function() {
+      stockSym = $(this).text();
+      return stockSym;
+  });
+
+});
+
 var seriesOptions = [],
-  seriesCounter = 0,
-  names = ['goog'];
+  seriesCounter = 0;
+  
+//getData();
 
 function createChart() {
 
@@ -155,28 +191,37 @@ function createChart() {
   });
 }
 
-$.each(names, function(i, name) {
+function getData() {
 
-  $.getJSON('https://www.quandl.com/api/v1/datasets/WIKI/' + name.toLowerCase() + '.json?auth_token=LnZgCF8fyVmHREMm9p3a', function(data) {
-    var newData = [];
+  $.each(names, function(i, name) {
 
-    data.data.forEach(function(point) {
-      newData.push([new Date(point[0]).getTime(), point[1]]);
+    $.getJSON('https://www.quandl.com/api/v1/datasets/WIKI/' + name.toLowerCase() + '.json?auth_token=LnZgCF8fyVmHREMm9p3a', function(data) {
+
+      if(data["quandl_error"]){
+        alert("Enter a valid stock symbol");
+        return;
+      }
+      var newData = [];
+
+      data.data.forEach(function(point) {
+        newData.push([new Date(point[0]).getTime(), point[1]]);
+      });
+
+      newData.reverse();
+
+      seriesOptions[i] = {
+        name: data.code,
+        data: newData
+      };
+
+      // As we're loading the data asynchronously, we don't know what order it will arrive. So
+      // we keep a counter and create the chart when all the data is loaded.
+      seriesCounter += 1;
+
+      if (seriesCounter === names.length) {
+        createChart();
+      }
     });
-
-    newData.reverse();
-
-    seriesOptions[i] = {
-      name: data.code,
-      data: newData
-    };
-
-    // As we're loading the data asynchronously, we don't know what order it will arrive. So
-    // we keep a counter and create the chart when all the data is loaded.
-    seriesCounter += 1;
-
-    if (seriesCounter === names.length) {
-      createChart();
-    }
   });
-});
+}
+

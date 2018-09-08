@@ -31,7 +31,7 @@
       </nav>
       
   
-  <div id="container" style="height: 400px; width: 800px;"></div>
+  <div id="container"></div>
       
 
 <div id="home">
@@ -55,7 +55,7 @@
         <ul id="stock-list" class="list-group">
           {{#each stocks}}
           <li data-id="{{this.id}}" class="list-group-item">
-            <a href="stock/{{this.id}}">{{this.symbol}}</a>
+            <a href="#" id="stockSymbol">{{this.symbol}}</a>
             <button class="btn btn-danger float-right delete">ｘ</button>
           </li>
           {{/each}}

@@ -7,3 +7,14 @@
   margin: 0 auto;
   text-align: center;
 }
+
+.list-group-item {
+
+  width: 150px;
+  display: inline-block;
+}
+
+#stock-list {
+
+  display: inline-block;
+}
